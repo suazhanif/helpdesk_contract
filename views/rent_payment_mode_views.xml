@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══ Contract form: Payment Method replaces "Enable PDC Cheques" ═══ -->
+    <record id="tenancy_details_form_payment_mode" model="ir.ui.view">
+        <field name="name">tenancy.details.form.payment.mode</field>
+        <field name="model">tenancy.details</field>
+        <field name="inherit_id" ref="rental_management_pdc.tenancy_details_form_view_inherit_pdc"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='pdc_enabled']" position="before">
+                <field name="payment_mode" widget="radio" options="{'horizontal': true}"
+                       readonly="contract_type != 'new_contract'" force_save="1"/>
+            </xpath>
+            <xpath expr="//field[@name='pdc_enabled']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//field[@name='pdc_auto_generate']" position="attributes">
+                <attribute name="string">Create Cheques on Activation</attribute>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button class="oe_stat_button" type="object" name="action_view_payment_invoices"
+                        icon="fa-money" invisible="payment_mode != 'standard' or pay_status == 'no_invoice'">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value"><field name="pay_amount_due" widget="monetary"/></span>
+                        <span class="o_stat_text">Balance Due</span>
+                    </div>
+                </button>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="after">
+                <div class="alert alert-danger mb-2 text-center" role="alert"
+                     invisible="payment_mode != 'standard' or not pay_overdue_count">
+                    <strong><field name="pay_overdue_count" readonly="1"/> overdue invoice(s):
+                        <field name="pay_overdue_amount" widget="monetary" readonly="1"/> outstanding.</strong>
+                </div>
+                <field name="pay_status" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="tenancy_details_list_payment_mode" model="ir.ui.view">
+        <field name="name">tenancy.details.list.payment.mode</field>
+        <field name="model">tenancy.details</field>
+        <field name="inherit_id" ref="rental_management.tenancy_details_list_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='contract_type']" position="before">
+                <field name="payment_mode" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="tenancy_details_search_payment_mode" model="ir.ui.view">
+        <field name="name">tenancy.details.search.payment.mode</field>
+        <field name="model">tenancy.details</field>
+        <field name="inherit_id" ref="rental_management.tenancy_details_search_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search/filter[1]" position="before">
+                <filter name="filter_standard_order" string="Standard Order"
+                        domain="[('payment_mode', '=', 'standard')]"/>
+                <filter name="filter_cheque_payment" string="Cheque Payment"
+                        domain="[('payment_mode', '=', 'cheque')]"/>
+                <separator/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ═══ Standard Order contracts: payment overview per contract ═══ -->
+    <record id="tenancy_details_list_standard_payments" model="ir.ui.view">
+        <field name="name">tenancy.details.list.standard.payments</field>
+        <field name="model">tenancy.details</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Standard Order Contracts" create="false"
+                  decoration-success="pay_status == 'paid'"
+                  decoration-danger="pay_overdue_count > 0">
+                <field name="tenancy_seq"/>
+                <field name="tenancy_id" string="Tenant"/>
+                <field name="property_id"/>
+                <field name="start_date" optional="show"/>
+                <field name="end_date" optional="show"/>
+                <field name="contract_type" widget="badge" string="Contract" optional="show"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="pay_amount_invoiced" sum="Invoiced"/>
+                <field name="pay_amount_paid" sum="Paid"/>
+                <field name="pay_amount_due" sum="Due"/>
+                <field name="pay_overdue_count" string="Overdue"/>
+                <field name="pay_overdue_amount"/>
+                <field name="pay_next_due_date"/>
+                <field name="pay_status" widget="badge"
+                       decoration-success="pay_status == 'paid'"
+                       decoration-warning="pay_status == 'partial'"
+                       decoration-danger="pay_status == 'due'"/>
+                <button name="action_view_payment_invoices" type="object" string="Invoices"
+                        icon="fa-list"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_standard_order_contracts" model="ir.actions.act_window">
+        <field name="name">Standard Order Contracts</field>
+        <field name="res_model">tenancy.details</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="tenancy_details_list_standard_payments"/>
+        <field name="domain">[('payment_mode', '=', 'standard'),
+            ('contract_type', 'not in', ('new_contract', 'pending_approval', 'approved'))]</field>
+        <field name="context">{'create': False}</field>
+    </record>
+
+    <!-- ═══ Standard Order Payments dashboard (rent invoices) ═══ -->
+    <record id="rent_invoice_kanban_standard_payments" model="ir.ui.view">
+        <field name="name">rent.invoice.kanban.standard.payments</field>
+        <field name="model">rent.invoice</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="pay_status" create="false" group_create="false"
+                    group_delete="false" group_edit="false" records_draggable="false"
+                    class="o_kanban_small_column">
+                <field name="pay_status"/>
+                <field name="pay_is_overdue"/>
+                <field name="currency_id"/>
+                <progressbar field="pay_status"
+                             colors='{"paid": "success", "partial": "warning", "unpaid": "danger", "draft": "muted"}'
+                             sum_field="pay_amount_residual"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between">
+                            <field name="customer_id" class="fw-bold"/>
+                            <span t-if="record.pay_is_overdue.raw_value" class="badge text-bg-danger">
+                                <field name="pay_days_overdue"/> days late
+                            </span>
+                        </div>
+                        <div class="text-muted small">
+                            <field name="tenancy_id"/> · <field name="pay_property_id"/>
+                        </div>
+                        <div class="small"><field name="type"/> · <field name="rent_invoice_id"/></div>
+                        <div class="d-flex justify-content-between mt-1">
+                            <span>Due: <field name="pay_due_date"/></span>
+                            <span>
+                                <field name="pay_amount_residual" widget="monetary" class="fw-bold"/>
+                                / <field name="pay_amount_total" widget="monetary"/>
+                            </span>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="rent_invoice_list_standard_payments" model="ir.ui.view">
+        <field name="name">rent.invoice.list.standard.payments</field>
+        <field name="model">rent.invoice</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Standard Order Payments" create="false"
+                  decoration-danger="pay_is_overdue" decoration-success="pay_status == 'paid'"
+                  decoration-muted="pay_status == 'cancel'">
+                <field name="tenancy_id"/>
+                <field name="customer_id" string="Tenant"/>
+                <field name="pay_property_id" optional="show"/>
+                <field name="type" optional="show"/>
+                <field name="rent_invoice_id"/>
+                <field name="invoice_date" optional="show"/>
+                <field name="pay_due_date"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="pay_amount_total" sum="Total"/>
+                <field name="pay_amount_paid" sum="Paid"/>
+                <field name="pay_amount_residual" sum="Due"/>
+                <field name="pay_is_overdue" column_invisible="1"/>
+                <field name="pay_days_overdue" string="Days Late" optional="show"/>
+                <field name="pay_status" widget="badge"
+                       decoration-success="pay_status == 'paid'"
+                       decoration-warning="pay_status == 'partial'"
+                       decoration-danger="pay_status == 'unpaid'"
+                       decoration-info="pay_status == 'draft'"/>
+                <button name="action_register_payment" type="object" string="Register Payment"
+                        icon="fa-money" invisible="pay_status not in ('unpaid', 'partial')"
+                        groups="account.group_account_invoice"/>
+                <button name="action_open_invoice" type="object" string="Open Invoice"
+                        icon="fa-external-link"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="rent_invoice_pivot_standard_payments" model="ir.ui.view">
+        <field name="name">rent.invoice.pivot.standard.payments</field>
+        <field name="model">rent.invoice</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <pivot string="Standard Order Payments" disable_linking="0">
+                <field name="pay_property_id" type="row"/>
+                <field name="pay_status" type="col"/>
+                <field name="pay_amount_residual" type="measure"/>
+                <field name="pay_amount_paid" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="rent_invoice_graph_standard_payments" model="ir.ui.view">
+        <field name="name">rent.invoice.graph.standard.payments</field>
+        <field name="model">rent.invoice</field>
+        <field name="arch" type="xml">
+            <graph string="Standard Order Payments" type="bar" stacked="1">
+                <field name="pay_due_date" interval="month"/>
+                <field name="pay_status"/>
+                <field name="pay_amount_total" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="rent_invoice_search_standard_payments" model="ir.ui.view">
+        <field name="name">rent.invoice.search.standard.payments</field>
+        <field name="model">rent.invoice</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="customer_id" string="Tenant"/>
+                <field name="tenancy_id"/>
+                <field name="pay_property_id"/>
+                <field name="rent_invoice_id"/>
+                <filter name="overdue" string="Overdue"
+                        domain="[('pay_status', 'in', ('unpaid', 'partial')),
+                                 ('pay_due_date', '&lt;', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="due_7" string="Due in Next 7 Days"
+                        domain="[('pay_status', 'in', ('unpaid', 'partial')),
+                                 ('pay_due_date', '&gt;=', context_today().strftime('%Y-%m-%d')),
+                                 ('pay_due_date', '&lt;=', (context_today() + relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter name="this_month" string="Due This Month"
+                        domain="[('pay_due_date', '&gt;=', (context_today() + relativedelta(day=1)).strftime('%Y-%m-%d')),
+                                 ('pay_due_date', '&lt;=', (context_today() + relativedelta(day=31)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="open" string="Payment Due" domain="[('pay_status', 'in', ('unpaid', 'partial'))]"/>
+                <filter name="partial" string="Partially Paid" domain="[('pay_status', '=', 'partial')]"/>
+                <filter name="paid" string="Paid" domain="[('pay_status', '=', 'paid')]"/>
+                <separator/>
+                <filter name="hide_cancel" string="Hide Cancelled" domain="[('pay_status', '!=', 'cancel')]"/>
+                <separator/>
+                <filter name="rent_only" string="Rent Only" domain="[('type', 'in', ('rent', 'full_rent'))]"/>
+                <group>
+                    <filter name="group_status" string="Payment Status" context="{'group_by': 'pay_status'}"/>
+                    <filter name="group_tenant" string="Tenant" context="{'group_by': 'customer_id'}"/>
+                    <filter name="group_contract" string="Contract" context="{'group_by': 'tenancy_id'}"/>
+                    <filter name="group_property" string="Property" context="{'group_by': 'pay_property_id'}"/>
+                    <filter name="group_due_month" string="Due Month" context="{'group_by': 'pay_due_date:month'}"/>
+                    <filter name="group_type" string="Payment Type" context="{'group_by': 'type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_standard_order_payments" model="ir.actions.act_window">
+        <field name="name">Standard Order Payments</field>
+        <field name="res_model">rent.invoice</field>
+        <field name="view_mode">kanban,list,pivot,graph</field>
+        <field name="search_view_id" ref="rent_invoice_search_standard_payments"/>
+        <field name="domain">[('payment_mode', '=', 'standard'), ('rent_invoice_id', '!=', False)]</field>
+        <field name="context">{'search_default_hide_cancel': 1, 'create': False}</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'kanban', 'view_id': ref('rent_invoice_kanban_standard_payments')}),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('rent_invoice_list_standard_payments')}),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('rent_invoice_pivot_standard_payments')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('rent_invoice_graph_standard_payments')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No Standard Order invoices yet</p>
+            <p>Invoices of contracts with the payment method <b>Standard Order</b> appear here,
+               grouped by payment status: due, partially paid or paid.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_standard_order_payments" name="Standard Order Payments"
+              parent="rental_management.menu_property_dashboards"
+              action="action_standard_order_payments" sequence="5"
+              groups="rental_management.property_rental_manager,rental_management.property_rental_officer"/>
+    <menuitem id="menu_standard_order_contracts" name="Standard Order Contracts"
+              parent="rental_management.menu_property_dashboards"
+              action="action_standard_order_contracts" sequence="6"
+              groups="rental_management.property_rental_manager,rental_management.property_rental_officer"/>
+</odoo>

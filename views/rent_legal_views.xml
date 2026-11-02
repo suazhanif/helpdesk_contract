@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Rent contract: overdue notices + escalate button ─────────────── -->
+    <record id="tenancy_details_form_legal" model="ir.ui.view">
+        <field name="name">tenancy.details.form.legal</field>
+        <field name="model">tenancy.details</field>
+        <field name="inherit_id" ref="rental_management.tenancy_details_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <field name="can_escalate_legal" invisible="1"/>
+                <field name="legal_state" invisible="1"/>
+                <button name="action_escalate_legal" type="object" string="Escalate to Legal Case"
+                        class="btn-danger" icon="fa-gavel" invisible="not can_escalate_legal"
+                        groups="rental_management.property_rental_manager,rental_management.property_rental_officer"/>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_legal_cases" type="object" class="oe_stat_button"
+                        icon="fa-gavel" invisible="legal_case_count == 0">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value"><field name="legal_case_count"/></span>
+                        <span class="o_stat_text">Legal Cases</span>
+                    </div>
+                </button>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="after">
+                <widget name="web_ribbon" title="Legal Approval" bg_color="text-bg-warning"
+                        invisible="legal_state != 'pending'"/>
+                <widget name="web_ribbon" title="Under Legal Case" bg_color="text-bg-danger"
+                        invisible="legal_state != 'approved'"/>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Overdue &amp; Legal" name="overdue_legal">
+                    <group>
+                        <group string="Overdue Rent">
+                            <field name="rent_overdue_amount"/>
+                            <field name="rent_overdue_invoice_count"/>
+                            <field name="rent_overdue_since"/>
+                            <field name="rent_notice_count"/>
+                            <field name="rent_last_notice_date"/>
+                            <field name="rent_next_notice_date"/>
+                        </group>
+                        <group string="Legal">
+                            <field name="legal_state" widget="badge"
+                                   decoration-warning="legal_state == 'pending'"
+                                   decoration-danger="legal_state == 'approved'"/>
+                            <field name="allow_direct_legal" widget="boolean_toggle"
+                                   groups="rental_management.property_rental_manager"/>
+                            <div colspan="2" class="text-muted small">
+                                <b>Escalate Directly</b> shows the <i>Escalate to Legal Case</i> button
+                                now, without waiting for the 4 overdue notices.
+                            </div>
+                            <button name="action_send_overdue_notice_now" type="object"
+                                    string="Send Next Notice Now" class="btn-link" colspan="2"
+                                    invisible="rent_overdue_invoice_count == 0 or rent_notice_count &gt;= 4"/>
+                        </group>
+                    </group>
+                    <field name="rent_notice_ids" readonly="1">
+                        <list>
+                            <field name="notice_no"/>
+                            <field name="notice_date"/>
+                            <field name="overdue_since"/>
+                            <field name="days_overdue"/>
+                            <field name="amount_due"/>
+                            <field name="currency_id" column_invisible="1"/>
+                            <field name="invoice_refs"/>
+                            <field name="notified_user_id"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ── Property: Under Legal Case ribbon ──────────────────────────────── -->
+    <record id="property_details_form_legal" model="ir.ui.view">
+        <field name="name">property.details.form.legal</field>
+        <field name="model">property.details</field>
+        <field name="inherit_id" ref="rental_management.property_details_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="after">
+                <widget name="web_ribbon" title="Under Legal Case" bg_color="text-bg-danger"
+                        invisible="stage != 'under_legal'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ── Legal case ─────────────────────────────────────────────────────── -->
+    <record id="view_rent_legal_case_form" model="ir.ui.view">
+        <field name="name">rent.legal.case.form</field>
+        <field name="model">rent.legal.case</field>
+        <field name="arch" type="xml">
+            <form string="Legal Case" create="false">
+                <header>
+                    <button name="action_approve" type="object" string="Approve" class="btn-success"
+                            invisible="state != 'pending'" groups="rental_management.property_rental_manager"
+                            confirm="Approve this legal case? The property will be set to Under Legal Case."/>
+                    <button name="action_open_reject_wizard" type="object" string="Reject" class="btn-danger"
+                            invisible="state != 'pending'" groups="rental_management.property_rental_manager"/>
+                    <button name="action_close" type="object" string="Close Case"
+                            invisible="state != 'approved'" groups="rental_management.property_rental_manager"
+                            confirm="Close this case? The property goes back to On Rent (running contract) or Available."/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,approved,closed"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Rejected" bg_color="text-bg-secondary" invisible="state != 'rejected'"/>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="tenancy_id"/>
+                            <field name="property_id"/>
+                            <field name="tenant_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group>
+                            <field name="amount_due"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="overdue_since"/>
+                            <field name="notices_sent"/>
+                            <field name="direct"/>
+                            <field name="invoice_refs"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Request">
+                            <field name="requested_by"/>
+                            <field name="request_date"/>
+                        </group>
+                        <group string="Decision">
+                            <field name="lawyer_id"/>
+                            <field name="decision_date"/>
+                            <field name="rejection_reason" invisible="not rejection_reason"/>
+                            <field name="closed_date" invisible="not closed_date"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Reason" name="reason">
+                            <field name="reason" readonly="state != 'pending'"/>
+                        </page>
+                        <page string="Lawyer" name="lawyer">
+                            <group>
+                                <field name="case_reference"/>
+                                <field name="lawyer_notes"/>
+                            </group>
+                        </page>
+                        <page string="Documents" name="documents">
+                            <field name="attachment_ids" widget="many2many_binary"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_rent_legal_case_list" model="ir.ui.view">
+        <field name="name">rent.legal.case.list</field>
+        <field name="model">rent.legal.case</field>
+        <field name="arch" type="xml">
+            <list string="Legal Cases" create="false"
+                  decoration-warning="state == 'pending'" decoration-muted="state in ('closed', 'rejected')">
+                <field name="name"/>
+                <field name="request_date"/>
+                <field name="tenancy_id"/>
+                <field name="property_id"/>
+                <field name="tenant_id"/>
+                <field name="amount_due" sum="Total"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="overdue_since" optional="show"/>
+                <field name="notices_sent" optional="show"/>
+                <field name="direct" optional="hide"/>
+                <field name="requested_by" widget="many2one_avatar_user" optional="show"/>
+                <field name="state" widget="badge"
+                       decoration-warning="state == 'pending'" decoration-danger="state == 'approved'"
+                       decoration-success="state == 'closed'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_rent_legal_case_search" model="ir.ui.view">
+        <field name="name">rent.legal.case.search</field>
+        <field name="model">rent.legal.case</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="tenant_id"/>
+                <field name="property_id"/>
+                <field name="tenancy_id"/>
+                <filter string="To Approve" name="to_approve" domain="[('state', '=', 'pending')]"/>
+                <filter string="Under Legal Case" name="active_cases" domain="[('state', '=', 'approved')]"/>
+                <filter string="Closed" name="closed" domain="[('state', '=', 'closed')]"/>
+                <filter string="Rejected" name="rejected" domain="[('state', '=', 'rejected')]"/>
+                <group>
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Property" name="group_property" context="{'group_by': 'property_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_rent_legal_case_to_approve" model="ir.actions.act_window">
+        <field name="name">Legal Cases to Approve</field>
+        <field name="res_model">rent.legal.case</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_rent_legal_case_search"/>
+        <field name="domain">[('state', '=', 'pending')]</field>
+        <field name="context">{'create': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing to approve</p>
+            <p>Contracts escalated with <b>Escalate to Legal Case</b> wait here for the lawyer's approval.</p>
+        </field>
+    </record>
+
+    <record id="action_rent_legal_case" model="ir.actions.act_window">
+        <field name="name">Legal Cases</field>
+        <field name="res_model">rent.legal.case</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_rent_legal_case_search"/>
+        <field name="context">{'create': False}</field>
+    </record>
+
+    <record id="action_tenancy_overdue_notice" model="ir.actions.act_window">
+        <field name="name">Overdue Notices</field>
+        <field name="res_model">tenancy.overdue.notice</field>
+        <field name="view_mode">list</field>
+        <field name="context">{'create': False}</field>
+    </record>
+    <record id="view_tenancy_overdue_notice_list" model="ir.ui.view">
+        <field name="name">tenancy.overdue.notice.list</field>
+        <field name="model">tenancy.overdue.notice</field>
+        <field name="arch" type="xml">
+            <list create="false">
+                <field name="notice_date"/>
+                <field name="tenancy_id"/>
+                <field name="notice_no"/>
+                <field name="overdue_since"/>
+                <field name="days_overdue"/>
+                <field name="amount_due" sum="Total"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="invoice_refs"/>
+                <field name="notified_user_id"/>
+            </list>
+        </field>
+    </record>
+
+     <menuitem id="menu_rent_legal_root" name="Legal Cases"
+              parent="rental_management.main_menu_rental_management" sequence="6"
+              groups="rental_management.property_rental_manager,rental_management.property_rental_officer"/>
+    <menuitem id="menu_rent_legal_to_approve" name="To Approve" parent="menu_rent_legal_root"
+              action="action_rent_legal_case_to_approve" sequence="1"/>
+    <menuitem id="menu_rent_legal_all" name="All Legal Cases" parent="menu_rent_legal_root"
+              action="action_rent_legal_case" sequence="2"/>
+    <menuitem id="menu_rent_overdue_notices" name="Overdue Notices" parent="menu_rent_legal_root"
+              action="action_tenancy_overdue_notice" sequence="3"/>
+</odoo>

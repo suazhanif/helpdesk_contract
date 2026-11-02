@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══ Dashboard views on pdc.wizard ═══ -->
+    <record id="pdc_dashboard_kanban" model="ir.ui.view">
+        <field name="name">pdc.wizard.kanban.dashboard</field>
+        <field name="model">pdc.wizard</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" create="false" group_create="false" group_delete="false"
+                    group_edit="false" records_draggable="false" class="o_kanban_small_column">
+                <field name="state"/>
+                <field name="currency_id"/>
+                <field name="pdc_late_deposit"/>
+                <field name="pdc_to_deposit"/>
+                <progressbar field="state"
+                             colors='{"registered": "info", "deposited": "warning", "done": "success", "bounced": "danger", "returned": "danger", "draft": "muted"}'
+                             sum_field="payment_amount"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between">
+                            <field name="name" class="fw-bold"/>
+                            <field name="payment_amount" widget="monetary" class="fw-bold"/>
+                        </div>
+                        <field name="partner_id"/>
+                        <div class="text-muted small">
+                            Cheque <field name="reference"/> · <field name="bank_id"/>
+                        </div>
+                        <div class="text-muted small" t-if="record.tenancy_id.raw_value">
+                            <field name="tenancy_id"/> · <field name="pdc_property_id"/>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1 small">
+                            <span>Due: <field name="due_date"/></span>
+                            <span t-if="record.deposit_date.raw_value">Deposited: <field name="deposit_date"/></span>
+                            <span t-elif="record.pdc_to_deposit.raw_value" class="badge text-bg-warning">Deposit today</span>
+                            <span t-elif="record.pdc_late_deposit.raw_value" class="badge text-bg-danger">Past due</span>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="pdc_dashboard_list" model="ir.ui.view">
+        <field name="name">pdc.wizard.list.dashboard</field>
+        <field name="model">pdc.wizard</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Cheques" create="false"
+                  decoration-danger="state in ('bounced', 'returned') or pdc_late_deposit"
+                  decoration-warning="pdc_to_deposit" decoration-success="state == 'done'"
+                  decoration-muted="state == 'cancel'">
+                <header>
+                    <button name="action_print_pdc_register" type="object" string="Print Cheque Register"
+                            icon="fa-print"/>
+                </header>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="name"/>
+                <field name="reference" string="Cheque No."/>
+                <field name="payment_type" optional="hide"/>
+                <field name="partner_id"/>
+                <field name="tenancy_id" optional="show"/>
+                <field name="pdc_property_id" optional="hide"/>
+                <field name="bank_id" optional="show"/>
+                <field name="journal_id" optional="show"/>
+                <field name="payment_date" optional="hide"/>
+                <field name="due_date"/>
+                <field name="deposit_date"/>
+                <field name="deposited_by_id" optional="hide"/>
+                <field name="done_date" string="Cleared On" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="payment_amount" sum="Total"/>
+                <field name="pdc_late_deposit" column_invisible="1"/>
+                <field name="pdc_to_deposit" column_invisible="1"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'registered'" decoration-warning="state == 'deposited'"
+                       decoration-success="state == 'done'" decoration-danger="state in ('bounced', 'returned')"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pdc_dashboard_pivot" model="ir.ui.view">
+        <field name="name">pdc.wizard.pivot.dashboard</field>
+        <field name="model">pdc.wizard</field>
+        <field name="arch" type="xml">
+            <pivot string="Cheques">
+                <field name="bank_id" type="row"/>
+                <field name="state" type="col"/>
+                <field name="payment_amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="pdc_dashboard_graph" model="ir.ui.view">
+        <field name="name">pdc.wizard.graph.dashboard</field>
+        <field name="model">pdc.wizard</field>
+        <field name="arch" type="xml">
+            <graph string="Cheques" type="bar" stacked="1">
+                <field name="due_date" interval="month"/>
+                <field name="state"/>
+                <field name="payment_amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="pdc_dashboard_search" model="ir.ui.view">
+        <field name="name">pdc.wizard.search.dashboard</field>
+        <field name="model">pdc.wizard</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="reference" string="Cheque No."/>
+                <field name="partner_id"/>
+                <field name="tenancy_id"/>
+                <field name="pdc_property_id"/>
+                <field name="bank_id"/>
+                <field name="journal_id"/>
+                <filter name="to_deposit_today" string="To Deposit Today"
+                        domain="[('state', 'in', ('draft', 'registered')), ('due_date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="due_week" string="Due in Next 7 Days"
+                        domain="[('state', 'in', ('draft', 'registered')),
+                                 ('due_date', '&gt;=', context_today().strftime('%Y-%m-%d')),
+                                 ('due_date', '&lt;=', (context_today() + relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter name="late" string="Past Due, Not Deposited"
+                        domain="[('state', 'in', ('draft', 'registered')), ('due_date', '&lt;', context_today().strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="deposited_today" string="Deposited Today"
+                        domain="[('deposit_date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="deposited_month" string="Deposited This Month"
+                        domain="[('deposit_date', '&gt;=', (context_today() + relativedelta(day=1)).strftime('%Y-%m-%d')),
+                                 ('deposit_date', '&lt;=', (context_today() + relativedelta(day=31)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="state_registered" string="Registered" domain="[('state', '=', 'registered')]"/>
+                <filter name="state_deposited" string="Deposited (Not Cleared)" domain="[('state', '=', 'deposited')]"/>
+                <filter name="state_deposited_all" string="Deposited &amp; Cleared" domain="[('state', 'in', ('deposited', 'done'))]"/>
+                <filter name="state_done" string="Cleared (Done)" domain="[('state', '=', 'done')]"/>
+                <filter name="state_bounced" string="Bounced / Returned" domain="[('state', 'in', ('bounced', 'returned'))]"/>
+                <separator/>
+                <filter name="hide_cancel" string="Hide Cancelled" domain="[('state', '!=', 'cancel')]"/>
+                <separator/>
+                <filter name="received" string="Received" domain="[('payment_type', '=', 'receive_money')]"/>
+                <filter name="issued" string="Issued" domain="[('payment_type', '=', 'send_money')]"/>
+                <group>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_partner" string="Partner" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_bank" string="Bank" context="{'group_by': 'bank_id'}"/>
+                    <filter name="group_journal" string="Journal" context="{'group_by': 'journal_id'}"/>
+                    <filter name="group_contract" string="Rent Contract" context="{'group_by': 'tenancy_id'}"/>
+                    <filter name="group_property" string="Property" context="{'group_by': 'pdc_property_id'}"/>
+                    <filter name="group_deposit_day" string="Deposit Date" context="{'group_by': 'deposit_date:day'}"/>
+                    <filter name="group_deposit_month" string="Deposit Month" context="{'group_by': 'deposit_date:month'}"/>
+                    <filter name="group_due_month" string="Due Month" context="{'group_by': 'due_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- PDC Dashboard: all cheques by status -->
+    <record id="action_pdc_dashboard" model="ir.actions.act_window">
+        <field name="name">PDC Dashboard</field>
+        <field name="res_model">pdc.wizard</field>
+        <field name="view_mode">kanban,list,pivot,graph,form</field>
+        <field name="search_view_id" ref="pdc_dashboard_search"/>
+        <field name="context">{'search_default_hide_cancel': 1, 'create': False}</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'kanban', 'view_id': ref('pdc_dashboard_kanban')}),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('pdc_dashboard_list')}),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('pdc_dashboard_pivot')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('pdc_dashboard_graph')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('sh_pdc.sh_pdc_payment_form_view')})]"/>
+    </record>
+
+    <!-- Deposited cheques, grouped by deposit date -->
+    <record id="action_pdc_deposited" model="ir.actions.act_window">
+        <field name="name">Deposited Cheques</field>
+        <field name="res_model">pdc.wizard</field>
+        <field name="view_mode">list,pivot,graph,form</field>
+        <field name="search_view_id" ref="pdc_dashboard_search"/>
+        <field name="domain">[('state', 'in', ('deposited', 'done'))]</field>
+        <field name="context">{'search_default_group_deposit_month': 1, 'create': False}</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('pdc_dashboard_list')}),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('pdc_dashboard_pivot')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('pdc_dashboard_graph')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('sh_pdc.sh_pdc_payment_form_view')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No deposited cheque yet</p>
+        </field>
+    </record>
+
+    <!-- Used by the report wizard's "View on Screen" button -->
+    <record id="action_pdc_dashboard_list" model="ir.actions.act_window">
+        <field name="name">Cheques</field>
+        <field name="res_model">pdc.wizard</field>
+        <field name="view_mode">list,pivot,form</field>
+        <field name="search_view_id" ref="pdc_dashboard_search"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('pdc_dashboard_list')}),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('pdc_dashboard_pivot')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('sh_pdc.sh_pdc_payment_form_view')})]"/>
+    </record>
+
+    <!-- ═══ Report wizard ═══ -->
+    <record id="pdc_register_report_wizard_form" model="ir.ui.view">
+        <field name="name">pdc.register.report.wizard.form</field>
+        <field name="model">pdc.register.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cheque Register Report">
+                <group>
+                    <group>
+                        <field name="status_scope" widget="radio"/>
+                        <field name="date_basis"/>
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                    </group>
+                    <group>
+                        <field name="payment_type"/>
+                        <field name="partner_id"/>
+                        <field name="tenancy_id"/>
+                        <field name="bank_id"/>
+                        <field name="journal_id"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_print" type="object" string="Print PDF" class="btn-primary" icon="fa-print"/>
+                    <button name="action_view" type="object" string="View on Screen" class="btn-secondary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_pdc_register_report_wizard" model="ir.actions.act_window">
+        <field name="name">Cheque Register Report</field>
+        <field name="res_model">pdc.register.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- ═══ PDF report ═══ -->
+    <record id="paperformat_pdc_register" model="report.paperformat">
+        <field name="name">Cheque Register (A4 Landscape)</field>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">30</field>
+        <field name="margin_bottom">15</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_spacing">25</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_pdc_register" model="ir.actions.report">
+        <field name="name">Cheque Register</field>
+        <field name="model">pdc.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">helpdesk_contractor.report_pdc_register</field>
+        <field name="report_file">helpdesk_contractor.report_pdc_register</field>
+        <field name="print_report_name">'Cheque Register'</field>
+        <field name="paperformat_id" ref="paperformat_pdc_register"/>
+    </record>
+
+    <template id="report_pdc_register">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page" style="font-size: 11px;">
+                    <h4 class="mb-0"><t t-out="title"/></h4>
+                    <div class="text-muted mb-2">
+                        <t t-out="filters"/>
+                        <t t-if="filters"> · </t>
+                        Printed <t t-out="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-6">
+                            <table class="table table-sm table-bordered">
+                                <thead><tr><th>Status</th><th class="text-end">Cheques</th><th class="text-end">Amount</th></tr></thead>
+                                <tbody>
+                                    <tr t-foreach="by_state" t-as="row">
+                                        <td t-out="row[0]"/>
+                                        <td class="text-end" t-out="row[1][0]"/>
+                                        <td class="text-end" t-out="row[1][1]" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-6">
+                            <table class="table table-sm table-bordered">
+                                <thead><tr><th>Bank</th><th class="text-end">Cheques</th><th class="text-end">Amount</th></tr></thead>
+                                <tbody>
+                                    <tr t-foreach="by_bank" t-as="row">
+                                        <td t-out="row[0]"/>
+                                        <td class="text-end" t-out="row[1][0]"/>
+                                        <td class="text-end" t-out="row[1][1]" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>PDC Ref.</th>
+                                <th>Cheque No.</th>
+                                <th>Partner / Tenant</th>
+                                <th>Contract / Property</th>
+                                <th>Bank</th>
+                                <th>Journal</th>
+                                <th>Due Date</th>
+                                <th>Deposit Date</th>
+                                <th>Cleared On</th>
+                                <th>Status</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="docs" t-as="c">
+                                <td t-out="c_index + 1"/>
+                                <td><span t-field="c.name"/></td>
+                                <td><span t-field="c.reference"/></td>
+                                <td><span t-field="c.partner_id"/></td>
+                                <td>
+                                    <t t-if="c.tenancy_id"><span t-field="c.tenancy_id"/>
+                                        <t t-if="c.pdc_property_id"><br/><span class="text-muted" t-field="c.pdc_property_id"/></t>
+                                    </t>
+                                </td>
+                                <td><span t-field="c.bank_id"/></td>
+                                <td><span t-field="c.journal_id"/></td>
+                                <td><span t-field="c.due_date"/></td>
+                                <td><span t-field="c.deposit_date"/></td>
+                                <td><span t-field="c.done_date"/></td>
+                                <td><span t-field="c.state"/></td>
+                                <td class="text-end"><span t-field="c.payment_amount"/></td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="fw-bold">
+                                <td colspan="11" class="text-end">Total (<t t-out="len(docs)"/> cheques)</td>
+                                <td class="text-end" t-out="total" t-options='{"widget": "monetary", "display_currency": currency}'/>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <table class="table table-borderless mt-4" style="page-break-inside: avoid;">
+                        <tr class="text-center">
+                            <td style="width: 50%;">______________________<br/>Prepared By</td>
+                            <td style="width: 50%;">______________________<br/>Verified By (Finance)</td>
+                        </tr>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- ═══ Menus ═══ -->
+    <menuitem id="menu_pdc_reports_root" name="PDC Dashboard &amp; Reports"
+              parent="account.menu_finance" sequence="26"
+              groups="account.group_account_invoice,rental_management_pdc.group_pdc_user,rental_management_pdc.group_pdc_manager"/>
+    <menuitem id="menu_pdc_dashboard" name="PDC Dashboard" parent="menu_pdc_reports_root"
+              action="action_pdc_dashboard" sequence="1"/>
+    <menuitem id="menu_pdc_deposited" name="Deposited Cheques" parent="menu_pdc_reports_root"
+              action="action_pdc_deposited" sequence="2"/>
+    <menuitem id="menu_pdc_register_report" name="Cheque Register Report" parent="menu_pdc_reports_root"
+              action="action_pdc_register_report_wizard" sequence="3"/>
+
+    <menuitem id="menu_rent_pdc_dashboard" name="PDC Cheques"
+              parent="rental_management.menu_property_dashboards"
+              action="action_pdc_dashboard" sequence="7"
+              groups="rental_management.property_rental_manager,rental_management.property_rental_officer"/>
+</odoo>

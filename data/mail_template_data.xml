@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="mail_template_job_request" model="mail.template">
+        <field name="name">Contractor: Job Request</field>
+        <field name="model_id" ref="helpdesk_contractor.model_helpdesk_contractor_job"/>
+        <field name="subject">Job request {{ object.name }} — {{ object.ticket_id.name }}</field>
+        <field name="email_from">{{ (object.user_id.email_formatted or object.company_id.email_formatted or user.email_formatted) }}</field>
+        <field name="partner_to">{{ object.contractor_id.id }}</field>
+        <field name="auto_delete" eval="False"/>
+        <field name="body_html" type="html">
+<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;">
+    <p>Dear <t t-out="object.contractor_id.name or ''"/>,</p>
+    <p>We would like to assign you the following job. Please open the link below to
+       <strong>accept or decline</strong> it. Once accepted, visit the site and submit
+       your quotation with photos from the same page.</p>
+    <div t-if="object.scope" style="background:#f5f6f8;padding:10px 12px;border-radius:4px;white-space:pre-line;" t-out="object.scope"/>
+    <table style="border-collapse:collapse;margin:12px 0;font-size:13px;">
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Job</td><td style="padding:4px 0;"><strong t-out="object.name"/></td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Ticket</td><td style="padding:4px 0;" t-out="object.ticket_id.name or ''"/></tr>
+        <tr t-if="object.site_details"><td style="padding:4px 12px 4px 0;color:#666;vertical-align:top;">Site</td><td style="padding:4px 0;white-space:pre-line;" t-out="object.site_details"/></tr>
+    </table>
+
+    <p style="margin:24px 0;">
+        <a t-att-href="object.get_base_url() + object.get_portal_url()"
+           style="background:#1a1a2e;color:#fff;padding:10px 22px;border-radius:4px;text-decoration:none;font-weight:bold;">View &amp; Confirm Job</a>
+    </p>
+    <p style="color:#888;font-size:12px;">This link is personal to you. Please do not forward it.</p>
+    <p>Regards,<br/><t t-out="object.user_id.name or object.company_id.name or ''"/><br/><t t-out="object.company_id.name or ''"/></p>
+</div>
+        </field>
+    </record>
+
+    <record id="mail_template_quote_approved" model="mail.template">
+        <field name="name">Contractor: Quotation Approved – Start Work</field>
+        <field name="model_id" ref="helpdesk_contractor.model_helpdesk_contractor_job"/>
+        <field name="subject">Quotation approved — please start work ({{ object.name }})</field>
+        <field name="email_from">{{ (object.user_id.email_formatted or object.company_id.email_formatted or user.email_formatted) }}</field>
+        <field name="partner_to">{{ object.contractor_id.id }}</field>
+        <field name="auto_delete" eval="False"/>
+        <field name="body_html" type="html">
+<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;">
+    <p>Dear <t t-out="object.contractor_id.name or ''"/>,</p>
+    <p>Your quotation of <strong t-out="format_amount(object.quote_amount, object.currency_id)"/> has been
+       <strong>approved</strong>. Please go ahead with the work.</p>
+    <p>When the work is finished, open the link below to report the work done and
+       upload completion photos.</p>
+    <table style="border-collapse:collapse;margin:12px 0;font-size:13px;">
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Job</td><td style="padding:4px 0;"><strong t-out="object.name"/></td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Ticket</td><td style="padding:4px 0;" t-out="object.ticket_id.name or ''"/></tr>
+        <tr t-if="object.site_details"><td style="padding:4px 12px 4px 0;color:#666;vertical-align:top;">Site</td><td style="padding:4px 0;white-space:pre-line;" t-out="object.site_details"/></tr>
+    </table>
+
+    <p style="margin:24px 0;">
+        <a t-att-href="object.get_base_url() + object.get_portal_url()"
+           style="background:#1a1a2e;color:#fff;padding:10px 22px;border-radius:4px;text-decoration:none;font-weight:bold;">Report Work Done</a>
+    </p>
+    <p style="color:#888;font-size:12px;">This link is personal to you. Please do not forward it.</p>
+    <p>Regards,<br/><t t-out="object.user_id.name or object.company_id.name or ''"/><br/><t t-out="object.company_id.name or ''"/></p>
+</div>
+        </field>
+    </record>
+
+    <record id="mail_template_quote_rejected" model="mail.template">
+        <field name="name">Contractor: Quotation Rejected</field>
+        <field name="model_id" ref="helpdesk_contractor.model_helpdesk_contractor_job"/>
+        <field name="subject">Quotation needs revision ({{ object.name }})</field>
+        <field name="email_from">{{ (object.user_id.email_formatted or object.company_id.email_formatted or user.email_formatted) }}</field>
+        <field name="partner_to">{{ object.contractor_id.id }}</field>
+        <field name="auto_delete" eval="False"/>
+        <field name="body_html" type="html">
+<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;">
+    <p>Dear <t t-out="object.contractor_id.name or ''"/>,</p>
+    <p>Your quotation for this job was <strong>not approved</strong>.</p>
+    <div t-if="object.quote_rejection_reason" style="background:#fff4e5;padding:10px 12px;border-radius:4px;white-space:pre-line;"><strong>Comments: </strong><t t-out="object.quote_rejection_reason"/></div>
+    <p>You can submit a revised quotation from the link below.</p>
+    <table style="border-collapse:collapse;margin:12px 0;font-size:13px;">
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Job</td><td style="padding:4px 0;"><strong t-out="object.name"/></td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Ticket</td><td style="padding:4px 0;" t-out="object.ticket_id.name or ''"/></tr>
+        <tr t-if="object.site_details"><td style="padding:4px 12px 4px 0;color:#666;vertical-align:top;">Site</td><td style="padding:4px 0;white-space:pre-line;" t-out="object.site_details"/></tr>
+    </table>
+
+    <p style="margin:24px 0;">
+        <a t-att-href="object.get_base_url() + object.get_portal_url()"
+           style="background:#1a1a2e;color:#fff;padding:10px 22px;border-radius:4px;text-decoration:none;font-weight:bold;">Revise Quotation</a>
+    </p>
+    <p style="color:#888;font-size:12px;">This link is personal to you. Please do not forward it.</p>
+    <p>Regards,<br/><t t-out="object.user_id.name or object.company_id.name or ''"/><br/><t t-out="object.company_id.name or ''"/></p>
+</div>
+        </field>
+    </record>
+
+    <record id="mail_template_work_approved" model="mail.template">
+        <field name="name">Contractor: Work Approved – Upload Invoice</field>
+        <field name="model_id" ref="helpdesk_contractor.model_helpdesk_contractor_job"/>
+        <field name="subject">Work approved — please upload your invoice ({{ object.name }})</field>
+        <field name="email_from">{{ (object.user_id.email_formatted or object.company_id.email_formatted or user.email_formatted) }}</field>
+        <field name="partner_to">{{ object.contractor_id.id }}</field>
+        <field name="auto_delete" eval="False"/>
+        <field name="body_html" type="html">
+<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;">
+    <p>Dear <t t-out="object.contractor_id.name or ''"/>,</p>
+    <p>The work for this job has been checked and <strong>approved</strong>. Thank you.</p>
+    <p>Please upload your invoice from the link below.</p>
+    <table style="border-collapse:collapse;margin:12px 0;font-size:13px;">
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Job</td><td style="padding:4px 0;"><strong t-out="object.name"/></td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Ticket</td><td style="padding:4px 0;" t-out="object.ticket_id.name or ''"/></tr>
+        <tr t-if="object.site_details"><td style="padding:4px 12px 4px 0;color:#666;vertical-align:top;">Site</td><td style="padding:4px 0;white-space:pre-line;" t-out="object.site_details"/></tr>
+    </table>
+
+    <p style="margin:24px 0;">
+        <a t-att-href="object.get_base_url() + object.get_portal_url()"
+           style="background:#1a1a2e;color:#fff;padding:10px 22px;border-radius:4px;text-decoration:none;font-weight:bold;">Upload Invoice</a>
+    </p>
+    <p style="color:#888;font-size:12px;">This link is personal to you. Please do not forward it.</p>
+    <p>Regards,<br/><t t-out="object.user_id.name or object.company_id.name or ''"/><br/><t t-out="object.company_id.name or ''"/></p>
+</div>
+        </field>
+    </record>
+
+    <record id="mail_template_work_rejected" model="mail.template">
+        <field name="name">Contractor: Work Rejected</field>
+        <field name="model_id" ref="helpdesk_contractor.model_helpdesk_contractor_job"/>
+        <field name="subject">Work needs attention ({{ object.name }})</field>
+        <field name="email_from">{{ (object.user_id.email_formatted or object.company_id.email_formatted or user.email_formatted) }}</field>
+        <field name="partner_to">{{ object.contractor_id.id }}</field>
+        <field name="auto_delete" eval="False"/>
+        <field name="body_html" type="html">
+<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;">
+    <p>Dear <t t-out="object.contractor_id.name or ''"/>,</p>
+    <p>The work reported for this job was <strong>not approved</strong> yet.</p>
+    <div t-if="object.work_rejection_reason" style="background:#fff4e5;padding:10px 12px;border-radius:4px;white-space:pre-line;"><strong>Comments: </strong><t t-out="object.work_rejection_reason"/></div>
+    <p>Please complete the points above and report the work again from the link below.</p>
+    <table style="border-collapse:collapse;margin:12px 0;font-size:13px;">
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Job</td><td style="padding:4px 0;"><strong t-out="object.name"/></td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Ticket</td><td style="padding:4px 0;" t-out="object.ticket_id.name or ''"/></tr>
+        <tr t-if="object.site_details"><td style="padding:4px 12px 4px 0;color:#666;vertical-align:top;">Site</td><td style="padding:4px 0;white-space:pre-line;" t-out="object.site_details"/></tr>
+    </table>
+
+    <p style="margin:24px 0;">
+        <a t-att-href="object.get_base_url() + object.get_portal_url()"
+           style="background:#1a1a2e;color:#fff;padding:10px 22px;border-radius:4px;text-decoration:none;font-weight:bold;">Update Work Done</a>
+    </p>
+    <p style="color:#888;font-size:12px;">This link is personal to you. Please do not forward it.</p>
+    <p>Regards,<br/><t t-out="object.user_id.name or object.company_id.name or ''"/><br/><t t-out="object.company_id.name or ''"/></p>
+</div>
+        </field>
+    </record>
+
+    <record id="mail_template_job_cancelled" model="mail.template">
+        <field name="name">Contractor: Job Cancelled</field>
+        <field name="model_id" ref="helpdesk_contractor.model_helpdesk_contractor_job"/>
+        <field name="subject">Job cancelled ({{ object.name }})</field>
+        <field name="email_from">{{ (object.user_id.email_formatted or object.company_id.email_formatted or user.email_formatted) }}</field>
+        <field name="partner_to">{{ object.contractor_id.id }}</field>
+        <field name="auto_delete" eval="False"/>
+        <field name="body_html" type="html">
+<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;">
+    <p>Dear <t t-out="object.contractor_id.name or ''"/>,</p>
+    <p>Please note that this job has been <strong>cancelled</strong>. No further action is needed.</p>
+    <table style="border-collapse:collapse;margin:12px 0;font-size:13px;">
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Job</td><td style="padding:4px 0;"><strong t-out="object.name"/></td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Ticket</td><td style="padding:4px 0;" t-out="object.ticket_id.name or ''"/></tr>
+        <tr t-if="object.site_details"><td style="padding:4px 12px 4px 0;color:#666;vertical-align:top;">Site</td><td style="padding:4px 0;white-space:pre-line;" t-out="object.site_details"/></tr>
+    </table>
+
+    <p style="margin:24px 0;">
+        <a t-att-href="object.get_base_url() + object.get_portal_url()"
+           style="background:#1a1a2e;color:#fff;padding:10px 22px;border-radius:4px;text-decoration:none;font-weight:bold;">View Job</a>
+    </p>
+    <p style="color:#888;font-size:12px;">This link is personal to you. Please do not forward it.</p>
+    <p>Regards,<br/><t t-out="object.user_id.name or object.company_id.name or ''"/><br/><t t-out="object.company_id.name or ''"/></p>
+</div>
+        </field>
+    </record>
+</odoo>

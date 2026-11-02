@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_helpdesk_contractor_job_form" model="ir.ui.view">
+        <field name="name">helpdesk.contractor.job.form</field>
+        <field name="model">helpdesk.contractor.job</field>
+        <field name="arch" type="xml">
+            <form string="Contractor Job">
+                <header>
+                    <button name="action_send_to_contractor" type="object" string="Send to Contractor"
+                            class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_send_to_contractor" type="object" string="Resend Email"
+                            invisible="state not in ('sent', 'declined')"/>
+                    <button name="action_approve_quotation" type="object" string="Approve Quotation"
+                            class="btn-success" invisible="state != 'quoted'"/>
+                    <button name="action_open_reject_wizard" type="object" string="Reject Quotation"
+                            class="btn-danger" invisible="state != 'quoted'"/>
+                    <button name="action_approve_work" type="object" string="Approve Work"
+                            class="btn-success" invisible="state != 'work_done'"/>
+                    <button name="action_open_reject_wizard" type="object" string="Reject Work"
+                            class="btn-danger" invisible="state != 'work_done'"/>
+                    <button name="action_close" type="object" string="Close Job"
+                            class="btn-primary" invisible="state != 'invoiced'"/>
+                    <button name="action_preview_portal" type="object" string="Contractor View"
+                            icon="fa-external-link" invisible="state == 'draft'"/>
+                    <button name="action_copy_portal_link" type="object" string="Show Link"
+                            icon="fa-link" invisible="state == 'draft'"/>
+                    <button name="action_cancel" type="object" string="Cancel"
+                            invisible="state in ('done', 'cancelled')"
+                            confirm="Cancel this contractor job? The contractor is emailed if they were already involved."/>
+                    <button name="action_reset_draft" type="object" string="Reset to Draft"
+                            invisible="state not in ('cancelled', 'declined')"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,sent,accepted,quoted,quote_approved,work_done,work_approved,invoiced,done"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Declined" bg_color="text-bg-danger" invisible="state != 'declined'"/>
+                    <widget name="web_ribbon" title="Cancelled" bg_color="text-bg-secondary" invisible="state != 'cancelled'"/>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="ticket_id" readonly="state != 'draft'"/>
+                            <field name="contractor_id" readonly="state not in ('draft', 'declined')"
+                                   context="{'default_is_contractor': True, 'default_is_company': True}"/>
+                            <field name="contractor_email" widget="email"/>
+                            <field name="contractor_phone" widget="phone"/>
+                        </group>
+                        <group>
+                            <field name="user_id"/>
+                            <field name="team_id"/>
+                            <field name="waiting_on" widget="badge"
+                                   decoration-warning="waiting_on == 'team'"
+                                   decoration-info="waiting_on == 'contractor'"/>
+                            <field name="sent_date" invisible="not sent_date"/>
+                            <field name="accepted_date" invisible="not accepted_date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-danger" role="alert" invisible="state != 'declined' or not decline_reason">
+                        <strong>Declined by contractor:</strong> <field name="decline_reason" nolabel="1"/>
+                    </div>
+                    <notebook>
+                        <page string="Scope &amp; Site" name="scope">
+                            <group>
+                                <field name="scope" placeholder="Shown to the contractor"/>
+                                <field name="site_details" placeholder="Shown to the contractor"/>
+                            </group>
+                        </page>
+                        <page string="Visit &amp; Quotation" name="quotation"
+                              invisible="state in ('draft', 'sent', 'declined')">
+                            <group>
+                                <group string="Site Visit">
+                                    <field name="visit_date"/>
+                                    <field name="visit_notes"/>
+                                </group>
+                                <group string="Quotation">
+                                    <field name="quote_amount"/>
+                                    <field name="quote_duration"/>
+                                    <field name="quote_validity_days"/>
+                                    <field name="quote_date"/>
+                                    <field name="quote_approved_by" invisible="not quote_approved_by"/>
+                                    <field name="quote_approved_date" invisible="not quote_approved_date"/>
+                                    <field name="quote_rejection_reason" invisible="not quote_rejection_reason"/>
+                                </group>
+                            </group>
+                            <group string="Quotation Details">
+                                <field name="quote_notes" nolabel="1" colspan="2"/>
+                            </group>
+                            <group string="Site Visit Photos">
+                                <field name="visit_photo_ids" widget="many2many_binary" nolabel="1" colspan="2"/>
+                            </group>
+                            <group string="Quotation Documents">
+                                <field name="quote_attachment_ids" widget="many2many_binary" nolabel="1" colspan="2"/>
+                            </group>
+                        </page>
+                        <page string="Work Done" name="work"
+                              invisible="state not in ('quote_approved', 'work_done', 'work_rejected', 'work_approved', 'invoiced', 'done')">
+                            <group>
+                                <group>
+                                    <field name="work_start_date"/>
+                                    <field name="work_end_date"/>
+                                    <field name="work_submitted_date"/>
+                                </group>
+                                <group>
+                                    <field name="work_approved_by" invisible="not work_approved_by"/>
+                                    <field name="work_approved_date" invisible="not work_approved_date"/>
+                                    <field name="work_rejection_reason" invisible="not work_rejection_reason"/>
+                                </group>
+                            </group>
+                            <group string="Work Details">
+                                <field name="work_notes" nolabel="1" colspan="2"/>
+                            </group>
+                            <group string="Completion Photos">
+                                <field name="work_photo_ids" widget="many2many_binary" nolabel="1" colspan="2"/>
+                            </group>
+                        </page>
+                        <page string="Invoice" name="invoice"
+                              invisible="state not in ('work_approved', 'invoiced', 'done')">
+                            <group>
+                                <group>
+                                    <field name="invoice_ref"/>
+                                    <field name="invoice_date"/>
+                                    <field name="invoice_amount"/>
+                                </group>
+                                <group>
+                                    <field name="invoice_submitted_date"/>
+                                    <field name="closed_date" invisible="not closed_date"/>
+                                </group>
+                            </group>
+                            <group string="Invoice Documents">
+                                <field name="invoice_attachment_ids" widget="many2many_binary" nolabel="1" colspan="2"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_helpdesk_contractor_job_list" model="ir.ui.view">
+        <field name="name">helpdesk.contractor.job.list</field>
+        <field name="model">helpdesk.contractor.job</field>
+        <field name="arch" type="xml">
+            <list string="Contractor Jobs"
+                  decoration-warning="waiting_on == 'team'"
+                  decoration-muted="state in ('done', 'cancelled', 'declined')">
+                <field name="name"/>
+                <field name="ticket_id"/>
+                <field name="contractor_id"/>
+                <field name="user_id" widget="many2one_avatar_user" optional="show"/>
+                <field name="team_id" optional="hide"/>
+                <field name="quote_amount" sum="Quoted" optional="show"/>
+                <field name="invoice_amount" sum="Invoiced" optional="show"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="waiting_on" widget="badge" optional="show"
+                       decoration-warning="waiting_on == 'team'" decoration-info="waiting_on == 'contractor'"/>
+                <field name="state" widget="badge"
+                       decoration-success="state in ('work_approved', 'invoiced', 'done')"
+                       decoration-info="state in ('sent', 'accepted', 'quote_approved')"
+                       decoration-warning="state in ('quoted', 'work_done')"
+                       decoration-danger="state in ('declined', 'quote_rejected', 'work_rejected')"/>
+                <field name="activity_ids" widget="list_activity" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_helpdesk_contractor_job_kanban" model="ir.ui.view">
+        <field name="name">helpdesk.contractor.job.kanban</field>
+        <field name="model">helpdesk.contractor.job</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column" group_create="false" quick_create="false">
+                <field name="currency_id"/>
+                <field name="waiting_on"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between">
+                            <field name="name" class="fw-bold"/>
+                            <span t-if="record.waiting_on.raw_value == 'team'" class="badge text-bg-warning">Action needed</span>
+                        </div>
+                        <field name="ticket_id" class="text-muted small"/>
+                        <field name="contractor_id"/>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <field name="quote_amount" widget="monetary"/>
+                            <div class="d-flex gap-2 align-items-center">
+                                <field name="activity_ids" widget="kanban_activity"/>
+                                <field name="user_id" widget="many2one_avatar_user"/>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_helpdesk_contractor_job_search" model="ir.ui.view">
+        <field name="name">helpdesk.contractor.job.search</field>
+        <field name="model">helpdesk.contractor.job</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="ticket_id"/>
+                <field name="contractor_id"/>
+                <field name="user_id"/>
+                <filter string="Action Needed" name="team_turn" domain="[('waiting_on', '=', 'team')]"/>
+                <filter string="Waiting on Contractor" name="contractor_turn" domain="[('waiting_on', '=', 'contractor')]"/>
+                <filter string="My Jobs" name="my_jobs" domain="[('user_id', '=', uid)]"/>
+                <separator/>
+                <filter string="Open" name="open" domain="[('state', 'not in', ('done', 'cancelled', 'declined'))]"/>
+                <filter string="Closed" name="closed" domain="[('state', '=', 'done')]"/>
+                <group>
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Contractor" name="group_contractor" context="{'group_by': 'contractor_id'}"/>
+                    <filter string="Responsible" name="group_user" context="{'group_by': 'user_id'}"/>
+                    <filter string="Helpdesk Team" name="group_team" context="{'group_by': 'team_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_helpdesk_contractor_job" model="ir.actions.act_window">
+        <field name="name">Contractor Jobs</field>
+        <field name="res_model">helpdesk.contractor.job</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_helpdesk_contractor_job_search"/>
+        <field name="context">{'search_default_open': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No contractor jobs yet</p>
+            <p>Open a ticket and click <b>Assign Contractor</b> to send it to a contractor or vendor.</p>
+        </field>
+    </record>
+</odoo>

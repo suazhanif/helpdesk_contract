@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_purchase_asset_create_wizard" model="ir.ui.view">
+        <field name="name">purchase.asset.create.wizard.form</field>
+        <field name="model">purchase.asset.create.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Create Assets">
+                <field name="order_id" invisible="1" force_save="1"/>
+                <field name="confirm_order" invisible="1" force_save="1"/>
+                <p class="text-muted">
+                    These lines are ticked <b>Is an Asset</b>. The values on top apply to every
+                    line that leaves the field empty. Assets are created as drafts.
+                </p>
+                <group>
+                    <group>
+                        <field name="responsible_id"/>
+                        <field name="location_id"/>
+                        <field name="department_id"/>
+                    </group>
+                    <group>
+                        <field name="asset_type"/>
+                        <field name="asset_category"/>
+                        <field name="model_id" options="{'no_create': True}"/>
+                    </group>
+                </group>
+                <field name="line_ids">
+                    <list editable="bottom" create="false" delete="true">
+                        <field name="po_line_id" column_invisible="1" force_save="1"/>
+                        <field name="product_id" readonly="1"/>
+                        <field name="name"/>
+                        <field name="quantity" force_save="1"/>
+                        <field name="one_per_unit" widget="boolean_toggle"/>
+                        <field name="serial_no" optional="show" readonly="one_per_unit"/>
+                        <field name="responsible_id" optional="show"/>
+                        <field name="location_id" optional="show"/>
+                        <field name="department_id" optional="hide"/>
+                        <field name="asset_type" optional="show"/>
+                        <field name="asset_category" optional="hide"/>
+                        <field name="model_id" optional="hide" options="{'no_create': True}"/>
+                    </list>
+                </field>
+                <footer>
+                    <button name="action_create" type="object" class="btn-primary"
+                            string="Confirm Order &amp; Create Assets" invisible="not confirm_order"/>
+                    <button name="action_create" type="object" class="btn-primary"
+                            string="Create Assets" invisible="confirm_order"/>
+                    <button name="action_confirm_without_assets" type="object" class="btn-secondary"
+                            string="Confirm without Assets" invisible="not confirm_order"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

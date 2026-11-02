@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_helpdesk_contractor_assign_wizard" model="ir.ui.view">
+        <field name="name">helpdesk.contractor.assign.wizard.form</field>
+        <field name="model">helpdesk.contractor.assign.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Assign Contractor">
+                <group>
+                    <group>
+                          <field name="ticket_id" force_save="1"/>
+                        <field name="contractor_id"
+                               context="{'res_partner_search_mode': 'supplier', 'default_is_contractor': True, 'default_is_company': True}"
+                               options="{'no_quick_create': True}"/>
+                        <field name="contractor_email" widget="email" placeholder="Needed to send the request"/>
+                        <field name="user_id"/>
+                    </group>
+                    <group>
+                        <field name="send_now" widget="boolean_toggle"/>
+                    </group>
+                </group>
+                <group string="Property / Unit">
+                    <group>
+                        <field name="hd_compound_id" options="{'no_create': True}"/>
+                        <field name="hd_building_id" options="{'no_create': True}"/>
+                        <field name="hd_unit_id" options="{'no_create': True}"
+                               placeholder="Search unit, building, compound or tenant..."
+                               context="{'hd_full_name': True,
+                                         'list_view_ref': 'helpdesk_contractor.property_details_hd_select_list',
+                                         'search_view_ref': 'helpdesk_contractor.property_details_hd_select_search'}"/>
+                    </group>
+                    <group invisible="not hd_unit_id">
+                        <field name="hd_unit_floor"/>
+                        <field name="hd_tenant_id"/>
+                    </group>
+                </group>
+                <group string="Scope / Instructions (shown to the contractor)">
+                    <field name="scope" nolabel="1" colspan="2" placeholder="What the contractor should do"/>
+                </group>
+                <group string="Site Details (shown to the contractor)">
+                    <field name="site_details" nolabel="1" colspan="2" placeholder="Address, location, who to contact on site"/>
+                </group>
+                <footer>
+                    <button name="action_assign" type="object" string="Assign" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_helpdesk_contractor_reject_wizard" model="ir.ui.view">
+        <field name="name">helpdesk.contractor.reject.wizard.form</field>
+        <field name="model">helpdesk.contractor.reject.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Reject">
+                <field name="job_id" invisible="1" force_save="1"/>
+                <field name="stage" invisible="1" force_save="1"/>
+                <p class="text-muted" invisible="stage != 'quotation'">
+                    The contractor is emailed this reason and can submit a revised quotation.
+                </p>
+                <p class="text-muted" invisible="stage != 'work'">
+                    The contractor is emailed this reason and can report the work again.
+                </p>
+                <field name="reason" placeholder="What needs to change?"/>
+                <footer>
+                    <button name="action_reject" type="object" string="Reject &amp; Notify Contractor" class="btn-danger"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

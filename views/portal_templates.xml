@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Read-only list of uploaded files: images as thumbnails, others as links -->
+    <template id="portal_contractor_files" name="Contractor Job Files">
+        <div t-if="files" class="d-flex flex-wrap gap-2 mt-2">
+            <t t-foreach="files" t-as="att">
+                <t t-set="url" t-value="attachment_url(att)"/>
+                <a t-if="att.mimetype and att.mimetype.startswith('image')" t-att-href="url" target="_blank"
+                   class="d-block border rounded overflow-hidden" style="width:96px;height:96px;">
+                    <img t-att-src="url" t-att-alt="att.name" style="width:100%;height:100%;object-fit:cover;"/>
+                </a>
+                <a t-else="" t-att-href="url + '&amp;download=true'" class="btn btn-sm btn-outline-secondary align-self-start">
+                    <i class="fa fa-file-o me-1"/><t t-out="att.name"/>
+                </a>
+            </t>
+        </div>
+    </template>
+
+    <template id="portal_contractor_job_page" name="Contractor Job">
+        <t t-call="portal.frontend_layout">
+            <t t-set="no_header" t-value="False"/>
+            <div class="container py-4" style="max-width:920px;">
+
+                <!-- ── Header ─────────────────────────────────────────── -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header py-3" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div>
+                                <div class="small" style="opacity:.75;"><t t-out="job.company_id.name"/> · Contractor Job</div>
+                                <h4 class="mb-0"><t t-out="job.name"/> — <t t-out="job.ticket_id.name"/></h4>
+                            </div>
+                            <span class="badge text-bg-light fs-6" t-out="state_label"/>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Steps -->
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <t t-foreach="steps" t-as="step">
+                                <t t-set="i" t-value="step_index"/>
+                                <span t-att-class="'badge rounded-pill px-3 py-2 ' + ('text-bg-success' if i &lt; current_step else ('text-bg-primary' if i == current_step else 'text-bg-light border text-muted'))">
+                                    <i t-if="i &lt; current_step" class="fa fa-check me-1"/>
+                                    <t t-out="i + 1"/>. <t t-out="step[1]"/>
+                                </span>
+                            </t>
+                        </div>
+
+                        <div t-if="message" class="alert alert-success mb-3"><i class="fa fa-check-circle me-1"/><t t-out="message"/></div>
+                        <div t-if="error" class="alert alert-danger mb-3"><i class="fa fa-exclamation-triangle me-1"/><t t-out="error"/></div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <h6 class="text-uppercase text-muted small fw-bold mb-1">Scope of work</h6>
+                                <div style="white-space:pre-line;" t-out="job.scope or '—'"/>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-uppercase text-muted small fw-bold mb-1">Site</h6>
+                                <div style="white-space:pre-line;" t-out="job.site_details or '—'"/>
+                                <h6 class="text-uppercase text-muted small fw-bold mb-1 mt-3">Your contact</h6>
+                                <div>
+                                    <t t-out="job.user_id.name or ''"/>
+                                    <t t-if="job.user_id.email"> · <a t-att-href="'mailto:%s' % job.user_id.email" t-out="job.user_id.email"/></t>
+                                    <t t-if="job.user_id.phone"> · <t t-out="job.user_id.phone"/></t>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── 1. Confirm ─────────────────────────────────────── -->
+                <div t-if="job.state == 'sent'" class="card border-0 shadow-sm mb-3">
+                    <div class="card-body">
+                        <h5>Can you take this job?</h5>
+                        <p class="text-muted">Accept to visit the site and send your quotation, or decline it.</p>
+                        <div class="d-flex flex-wrap gap-2 align-items-start">
+                            <form t-attf-action="/contractor/job/{{ job.id }}/accept" method="post">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="hidden" name="access_token" t-att-value="access_token"/>
+                                <button class="btn btn-success px-4"><i class="fa fa-check me-1"/>Accept job</button>
+                            </form>
+                            <button class="btn btn-outline-danger px-4" type="button"
+                                    onclick="document.getElementById('decline_box').classList.toggle('d-none')">
+                                <i class="fa fa-times me-1"/>Decline
+                            </button>
+                        </div>
+                        <form id="decline_box" class="d-none mt-3" t-attf-action="/contractor/job/{{ job.id }}/decline" method="post">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <input type="hidden" name="access_token" t-att-value="access_token"/>
+                            <label class="form-label fw-bold">Reason (optional)</label>
+                            <textarea name="reason" rows="2" class="form-control mb-2"/>
+                            <button class="btn btn-danger">Confirm decline</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ── 2. Site visit + quotation ──────────────────────── -->
+                <div t-if="job.state in ('accepted', 'quote_rejected')" class="card border-0 shadow-sm mb-3">
+                    <div class="card-body">
+                        <h5>Site visit &amp; quotation</h5>
+                        <div t-if="job.state == 'quote_rejected' and job.quote_rejection_reason" class="alert alert-warning">
+                            <strong>Your previous quotation was not approved:</strong>
+                            <div style="white-space:pre-line;" t-out="job.quote_rejection_reason"/>
+                        </div>
+                        <form t-attf-action="/contractor/job/{{ job.id }}/quotation" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <input type="hidden" name="access_token" t-att-value="access_token"/>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Visit date</label>
+                                    <input type="date" name="visit_date" class="form-control"
+                                           t-att-value="job.visit_date or ''"/>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold">Findings on site</label>
+                                    <textarea name="visit_notes" rows="3" class="form-control"
+                                              placeholder="What you found, cause of the problem, what needs to be done"><t t-out="job.visit_notes or ''"/></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold">Site photos <span class="text-danger">*</span></label>
+                                    <input type="file" name="visit_photos" class="form-control" accept="image/*" multiple="multiple"/>
+                                    <t t-call="helpdesk_contractor.portal_contractor_files"><t t-set="files" t-value="job.visit_photo_ids"/></t>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Quotation amount (<t t-out="job.currency_id.name"/>) <span class="text-danger">*</span></label>
+                                    <input type="number" step="0.001" min="0" name="quote_amount" class="form-control" required="required"
+                                           t-att-value="job.quote_amount or ''"/>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Estimated duration</label>
+                                    <input type="text" name="quote_duration" class="form-control" placeholder="e.g. 2 days"
+                                           t-att-value="job.quote_duration or ''"/>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Valid for (days)</label>
+                                    <input type="number" min="0" name="quote_validity_days" class="form-control"
+                                           t-att-value="job.quote_validity_days or ''"/>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold">Quotation details</label>
+                                    <textarea name="quote_notes" rows="3" class="form-control"
+                                              placeholder="Materials, labour, exclusions, terms"><t t-out="job.quote_notes or ''"/></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold">Quotation document (PDF or image)</label>
+                                    <input type="file" name="quote_documents" class="form-control" accept=".pdf,image/*" multiple="multiple"/>
+                                    <t t-call="helpdesk_contractor.portal_contractor_files"><t t-set="files" t-value="job.quote_attachment_ids"/></t>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary px-4 mt-3"><i class="fa fa-paper-plane me-1"/>Submit quotation</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ── 3. Work done ───────────────────────────────────── -->
+                <div t-if="job.state in ('quote_approved', 'work_rejected')" class="card border-0 shadow-sm mb-3">
+                    <div class="card-body">
+                        <h5>Report the completed work</h5>
+                        <div t-if="job.state == 'quote_approved'" class="alert alert-success py-2">
+                            Your quotation of <strong t-out="job._format_amount(job.quote_amount)"/> is approved. Please go ahead with the work.
+                        </div>
+                        <div t-if="job.state == 'work_rejected' and job.work_rejection_reason" class="alert alert-warning">
+                            <strong>The work was not approved yet:</strong>
+                            <div style="white-space:pre-line;" t-out="job.work_rejection_reason"/>
+                        </div>
+                        <form t-attf-action="/contractor/job/{{ job.id }}/work" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <input type="hidden" name="access_token" t-att-value="access_token"/>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Work started</label>
+                                    <input type="date" name="work_start_date" class="form-control" t-att-value="job.work_start_date or ''"/>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Work completed</label>
+                                    <input type="date" name="work_end_date" class="form-control" t-att-value="job.work_end_date or ''"/>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold">Work done <span class="text-danger">*</span></label>
+                                    <textarea name="work_notes" rows="4" class="form-control" required="required"
+                                              placeholder="What was repaired or replaced, materials used, tests done"><t t-out="job.work_notes or ''"/></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold">Completion photos <span class="text-danger">*</span></label>
+                                    <input type="file" name="work_photos" class="form-control" accept="image/*" multiple="multiple"/>
+                                    <t t-call="helpdesk_contractor.portal_contractor_files"><t t-set="files" t-value="job.work_photo_ids"/></t>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary px-4 mt-3"><i class="fa fa-paper-plane me-1"/>Submit completed work</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ── 4. Invoice ─────────────────────────────────────── -->
+                <div t-if="job.state == 'work_approved'" class="card border-0 shadow-sm mb-3">
+                    <div class="card-body">
+                        <h5>Upload your invoice</h5>
+                        <div class="alert alert-success py-2">The work has been approved. Thank you.</div>
+                        <form t-attf-action="/contractor/job/{{ job.id }}/invoice" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <input type="hidden" name="access_token" t-att-value="access_token"/>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Invoice number <span class="text-danger">*</span></label>
+                                    <input type="text" name="invoice_ref" class="form-control" required="required"/>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Invoice date</label>
+                                    <input type="date" name="invoice_date" class="form-control"/>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Amount (<t t-out="job.currency_id.name"/>)</label>
+                                    <input type="number" step="0.001" min="0" name="invoice_amount" class="form-control"
+                                           t-att-value="job.quote_amount or ''"/>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold">Invoice file (PDF or image) <span class="text-danger">*</span></label>
+                                    <input type="file" name="invoice_documents" class="form-control" accept=".pdf,image/*" multiple="multiple" required="required"/>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary px-4 mt-3"><i class="fa fa-upload me-1"/>Submit invoice</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ── Waiting / final states ─────────────────────────── -->
+                <div t-if="job.state in ('quoted', 'work_done', 'invoiced', 'done', 'declined', 'cancelled', 'draft')"
+                     class="alert alert-info">
+                    <t t-if="job.state == 'quoted'">Your quotation is being reviewed. You will receive an email once it is approved.</t>
+                    <t t-elif="job.state == 'work_done'">The completed work is being reviewed. You will receive an email once it is approved.</t>
+                    <t t-elif="job.state == 'invoiced'">Your invoice has been received and is being processed.</t>
+                    <t t-elif="job.state == 'done'">This job is closed. Thank you for your work.</t>
+                    <t t-elif="job.state == 'declined'">You declined this job.</t>
+                    <t t-elif="job.state == 'cancelled'">This job has been cancelled. No further action is needed.</t>
+                    <t t-else="">This job has not been sent yet.</t>
+                </div>
+
+                <!-- ── History: what has been submitted so far ───────── -->
+                <div t-if="job.quote_date or job.work_submitted_date or job.invoice_submitted_date" class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="text-uppercase text-muted small fw-bold">Submitted so far</h6>
+                        <div t-if="job.quote_date and job.state not in ('accepted', 'quote_rejected')" class="border-top pt-2 mt-2">
+                            <strong>Quotation:</strong> <t t-out="job._format_amount(job.quote_amount)"/>
+                            <span t-if="job.quote_duration" class="text-muted"> · <t t-out="job.quote_duration"/></span>
+                            <div t-if="job.visit_notes" class="small" style="white-space:pre-line;" t-out="job.visit_notes"/>
+                            <t t-call="helpdesk_contractor.portal_contractor_files"><t t-set="files" t-value="job.visit_photo_ids | job.quote_attachment_ids"/></t>
+                        </div>
+                        <div t-if="job.work_submitted_date and job.state not in ('quote_approved', 'work_rejected')" class="border-top pt-2 mt-2">
+                            <strong>Work done</strong>
+                            <div t-if="job.work_notes" class="small" style="white-space:pre-line;" t-out="job.work_notes"/>
+                            <t t-call="helpdesk_contractor.portal_contractor_files"><t t-set="files" t-value="job.work_photo_ids"/></t>
+                        </div>
+                        <div t-if="job.invoice_submitted_date" class="border-top pt-2 mt-2">
+                            <strong>Invoice:</strong> <t t-out="job.invoice_ref or ''"/> · <t t-out="job._format_amount(job.invoice_amount)"/>
+                            <t t-call="helpdesk_contractor.portal_contractor_files"><t t-set="files" t-value="job.invoice_attachment_ids"/></t>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

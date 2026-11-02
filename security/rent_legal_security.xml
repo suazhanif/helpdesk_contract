@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="group_rent_legal_lawyer" model="res.groups">
+        <field name="name">Internal Lawyer (Legal Case Approval)</field>
+        <field name="privilege_id" ref="rental_management.module_rental_management"/>
+        <!-- The lawyer must be able to open the contract and the property -->
+        <field name="implied_ids" eval="[(4, ref('rental_management.property_rental_officer'))]"/>
+        <field name="comment">Approves or rejects rent contracts escalated to a legal case, and closes cases.</field>
+    </record>
+</odoo>

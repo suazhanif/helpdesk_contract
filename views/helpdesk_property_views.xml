@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══ Unit picker: detailed list and search (used by "Search More...") ═══ -->
+    <record id="property_details_hd_select_list" model="ir.ui.view">
+        <field name="name">property.details.list.helpdesk.select</field>
+        <field name="model">property.details</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Units">
+                <field name="property_project_id" string="Compound"/>
+                <field name="subproject_id" string="Building"/>
+                <field name="name" string="Unit / Flat"/>
+                <field name="floor"/>
+                <field name="type" optional="show"/>
+                <field name="hd_current_tenant_id" string="Tenant"/>
+                <field name="hd_current_tenancy_id" string="Contract" optional="show"/>
+                <field name="stage" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="property_details_hd_select_search" model="ir.ui.view">
+        <field name="name">property.details.search.helpdesk.select</field>
+        <field name="model">property.details</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" string="Unit / Flat"/>
+                <field name="property_project_id" string="Compound"/>
+                <field name="subproject_id" string="Building"/>
+                <field name="hd_current_tenant_id" string="Tenant"/>
+                <field name="floor"/>
+                <group>
+                    <filter name="group_compound" string="Compound" context="{'group_by': 'property_project_id'}"/>
+                    <filter name="group_building" string="Building" context="{'group_by': 'subproject_id'}"/>
+                    <filter name="group_floor" string="Floor" context="{'group_by': 'floor'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ═══ Ticket form: Property / Unit section ═══ -->
+    <record id="helpdesk_ticket_view_form_property" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.form.property</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="helpdesk.helpdesk_ticket_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="before">
+                <group string="Property / Unit" name="hd_property">
+                    <group>
+                        <field name="hd_compound_id" options="{'no_create': True}"
+                               placeholder="Select the compound..."/>
+                        <field name="hd_building_id" options="{'no_create': True}"
+                               placeholder="Select the building..."/>
+                        <field name="hd_unit_id" options="{'no_create': True}"
+                               placeholder="Search unit, building, compound or tenant..."
+                               context="{'hd_full_name': True,
+                                         'list_view_ref': 'helpdesk_contractor.property_details_hd_select_list',
+                                         'search_view_ref': 'helpdesk_contractor.property_details_hd_select_search'}"/>
+                    </group>
+                    <group invisible="not hd_unit_id">
+                        <field name="hd_unit_floor"/>
+                        <field name="hd_tenant_id"/>
+                        <field name="hd_tenancy_id"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="helpdesk_ticket_view_list_property" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.list.property</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="helpdesk.helpdesk_tickets_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <field name="hd_location_display" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="helpdesk_ticket_view_search_property" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.search.property</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="helpdesk.helpdesk_tickets_view_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <field name="hd_compound_id"/>
+                <field name="hd_building_id"/>
+                <field name="hd_unit_id"/>
+                <filter name="no_property" string="No Unit Selected" domain="[('hd_unit_id', '=', False)]"/>
+                <group>
+                    <filter name="group_hd_compound" string="Compound" context="{'group_by': 'hd_compound_id'}"/>
+                    <filter name="group_hd_building" string="Building" context="{'group_by': 'hd_building_id'}"/>
+                    <filter name="group_hd_unit" string="Unit" context="{'group_by': 'hd_unit_id'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ═══ Contractor job: show the property ═══ -->
+    <record id="view_helpdesk_contractor_job_form_property" model="ir.ui.view">
+        <field name="name">helpdesk.contractor.job.form.property</field>
+        <field name="model">helpdesk.contractor.job</field>
+        <field name="inherit_id" ref="helpdesk_contractor.view_helpdesk_contractor_job_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='site_details']" position="before">
+                <field name="hd_compound_id"/>
+                <field name="hd_building_id"/>
+                <field name="hd_unit_id"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_helpdesk_contractor_job_list_property" model="ir.ui.view">
+        <field name="name">helpdesk.contractor.job.list.property</field>
+        <field name="model">helpdesk.contractor.job</field>
+        <field name="inherit_id" ref="helpdesk_contractor.view_helpdesk_contractor_job_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <field name="hd_building_id" optional="show"/>
+                <field name="hd_unit_id" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_helpdesk_contractor_job_search_property" model="ir.ui.view">
+        <field name="name">helpdesk.contractor.job.search.property</field>
+        <field name="model">helpdesk.contractor.job</field>
+        <field name="inherit_id" ref="helpdesk_contractor.view_helpdesk_contractor_job_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <field name="hd_compound_id"/>
+                <field name="hd_building_id"/>
+                <field name="hd_unit_id"/>
+                <filter name="group_job_building" string="Building" context="{'group_by': 'hd_building_id'}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

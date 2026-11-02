@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══ Purchase order: property / expense classification ═══ -->
+    <record id="purchase_order_form_property_expense" model="ir.ui.view">
+        <field name="name">purchase.order.form.property.expense</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_ref']" position="after">
+                <field name="exp_compound_id" options="{'no_create': True}"/>
+                <field name="exp_building_id" options="{'no_create': True}"/>
+                <field name="exp_unit_id" options="{'no_create': True}"
+                       context="{'hd_full_name': True,
+                                 'list_view_ref': 'helpdesk_contractor.property_details_hd_select_list',
+                                 'search_view_ref': 'helpdesk_contractor.property_details_hd_select_search'}"/>
+                <field name="exp_category"/>
+                <field name="exp_nature" widget="radio" options="{'horizontal': true}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ═══ Vendor bill: property / expense classification ═══ -->
+    <record id="account_move_form_property_expense" model="ir.ui.view">
+        <field name="name">account.move.form.property.expense</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@id='header_left_group']" position="inside">
+                <field name="exp_compound_id" options="{'no_create': True}"
+                       invisible="move_type not in ('in_invoice', 'in_refund')"/>
+                <field name="exp_building_id" options="{'no_create': True}"
+                       invisible="move_type not in ('in_invoice', 'in_refund')"/>
+                <field name="exp_unit_id" options="{'no_create': True}"
+                       invisible="move_type not in ('in_invoice', 'in_refund')"
+                       context="{'hd_full_name': True,
+                                 'list_view_ref': 'helpdesk_contractor.property_details_hd_select_list',
+                                 'search_view_ref': 'helpdesk_contractor.property_details_hd_select_search'}"/>
+                <field name="exp_category" invisible="move_type not in ('in_invoice', 'in_refund')"/>
+                <field name="exp_nature" widget="radio" options="{'horizontal': true}"
+                       invisible="move_type not in ('in_invoice', 'in_refund')"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ═══ Expense dashboard ═══ -->
+    <record id="property_expense_report_pivot" model="ir.ui.view">
+        <field name="name">property.expense.report.pivot</field>
+        <field name="model">property.expense.report</field>
+        <field name="arch" type="xml">
+            <pivot string="Property Expenses" sample="1">
+                <field name="building_id" type="row"/>
+                <field name="nature" type="col"/>
+                <field name="category" type="col"/>
+                <field name="amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="property_expense_report_graph" model="ir.ui.view">
+        <field name="name">property.expense.report.graph</field>
+        <field name="model">property.expense.report</field>
+        <field name="arch" type="xml">
+            <graph string="Property Expenses" type="bar" stacked="1" sample="1">
+                <field name="date" interval="month"/>
+                <field name="category"/>
+                <field name="amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="property_expense_report_list" model="ir.ui.view">
+        <field name="name">property.expense.report.list</field>
+        <field name="model">property.expense.report</field>
+        <field name="arch" type="xml">
+            <list string="Property Expenses" create="false" edit="false" delete="false"
+                  decoration-muted="stage == 'committed'">
+                <field name="date"/>
+                <field name="reference"/>
+                <field name="source" optional="show"/>
+                <field name="partner_id"/>
+                <field name="compound_id" optional="show"/>
+                <field name="building_id"/>
+                <field name="unit_id"/>
+                <field name="category"/>
+                <field name="nature" widget="badge"
+                       decoration-info="nature == 'direct'" decoration-warning="nature == 'indirect'"/>
+                <field name="stage" widget="badge"
+                       decoration-success="stage == 'actual'" decoration-muted="stage == 'committed'"/>
+                <field name="payment_state" optional="hide" widget="badge"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="amount" sum="Total"/>
+                <button name="action_open_source" type="object" string="Open" icon="fa-external-link"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="property_expense_report_search" model="ir.ui.view">
+        <field name="name">property.expense.report.search</field>
+        <field name="model">property.expense.report</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="compound_id"/>
+                <field name="building_id"/>
+                <field name="unit_id"/>
+                <field name="partner_id"/>
+                <field name="reference"/>
+                <filter name="direct" string="Direct" domain="[('nature', '=', 'direct')]"/>
+                <filter name="indirect" string="Indirect" domain="[('nature', '=', 'indirect')]"/>
+                <separator/>
+                <filter name="actual" string="Actual (Billed)" domain="[('stage', '=', 'actual')]"/>
+                <filter name="committed" string="Committed (Not Billed)" domain="[('stage', '=', 'committed')]"/>
+                <separator/>
+                <filter name="cat_purchase" string="Purchases" domain="[('category', '=', 'purchase')]"/>
+                <filter name="cat_maintenance" string="Maintenance" domain="[('category', '=', 'maintenance')]"/>
+                <filter name="cat_contractor" string="Contractors" domain="[('category', '=', 'contractor')]"/>
+                <filter name="cat_landlord" string="Landlord / Rent" domain="[('category', '=', 'landlord')]"/>
+                <filter name="cat_utility" string="Utilities" domain="[('category', '=', 'utility')]"/>
+                <separator/>
+                <filter name="no_property" string="Not Linked to a Property"
+                        domain="[('compound_id', '=', False), ('building_id', '=', False), ('unit_id', '=', False)]"/>
+                <separator/>
+                <filter name="unpaid" string="Bills Not Paid" domain="[('stage', '=', 'actual'), ('payment_state', 'in', ('not_paid', 'partial'))]"/>
+                <separator/>
+                <filter name="filter_date" string="Date" date="date"/>
+                <group>
+                    <filter name="group_compound" string="Compound" context="{'group_by': 'compound_id'}"/>
+                    <filter name="group_building" string="Building" context="{'group_by': 'building_id'}"/>
+                    <filter name="group_unit" string="Unit" context="{'group_by': 'unit_id'}"/>
+                    <filter name="group_nature" string="Direct / Indirect" context="{'group_by': 'nature'}"/>
+                    <filter name="group_category" string="Category" context="{'group_by': 'category'}"/>
+                    <filter name="group_stage" string="Stage" context="{'group_by': 'stage'}"/>
+                    <filter name="group_partner" string="Vendor" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_source" string="Source" context="{'group_by': 'source'}"/>
+                    <filter name="group_month" string="Month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_property_expense_report" model="ir.actions.act_window">
+        <field name="name">Expense Dashboard</field>
+        <field name="res_model">property.expense.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="property_expense_report_search"/>
+        <field name="context">{'search_default_actual': 1}</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('property_expense_report_pivot')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('property_expense_report_graph')}),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('property_expense_report_list')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No expenses yet</p>
+            <p>Posted vendor bills, confirmed purchase orders and contractor jobs appear here by
+               compound, building and unit. Set the Compound / Building / Unit on the purchase
+               order or vendor bill to classify a cost.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_property_expense_report" name="Expense Dashboard"
+              parent="rental_management.menu_property_dashboards"
+              action="action_property_expense_report" sequence="8"
+              groups="rental_management.property_rental_manager,account.group_account_manager"/>
+    <menuitem id="menu_property_expense_report_accounting" name="Property Expenses"
+              parent="account.menu_finance_reports" sequence="90"
+              action="action_property_expense_report"
+              groups="account.group_account_manager,rental_management.property_rental_manager"/>
+
+    <!-- Link existing vendor bills to their property (runs on install / upgrade) -->
+    <function model="account.move" name="_exp_backfill"/>
+</odoo>

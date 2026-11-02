@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Contractor job: Send by WhatsApp + Vendor Bill -->
+    <record id="view_helpdesk_contractor_job_form_whatsapp_bill" model="ir.ui.view">
+        <field name="name">helpdesk.contractor.job.form.whatsapp.bill</field>
+        <field name="model">helpdesk.contractor.job</field>
+        <field name="inherit_id" ref="helpdesk_contractor.view_helpdesk_contractor_job_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_preview_portal']" position="before">
+                <button name="action_send_whatsapp" type="object" string="Send by WhatsApp"
+                        icon="fa-whatsapp" class="btn-success"
+                        invisible="state in ('done', 'cancelled')"/>
+                <button name="action_create_vendor_bill" type="object" string="Create Vendor Bill"
+                        icon="fa-file-text-o" groups="account.group_account_invoice"
+                        invisible="vendor_bill_id or state not in ('invoiced', 'done')"/>
+            </xpath>
+            <xpath expr="//field[@name='site_details']" position="after">
+                <field name="vendor_bill_id" invisible="not vendor_bill_id" groups="account.group_account_invoice"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

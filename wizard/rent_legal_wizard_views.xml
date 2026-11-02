@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_rent_legal_escalate_wizard" model="ir.ui.view">
+        <field name="name">rent.legal.escalate.wizard.form</field>
+        <field name="model">rent.legal.escalate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Escalate to Legal Case">
+                <field name="tenancy_id" invisible="1" force_save="1"/>
+                <field name="currency_id" invisible="1"/>
+                <div class="alert alert-warning" role="alert" invisible="not direct">
+                    Direct escalation: not all overdue notices have been sent yet.
+                </div>
+                <group>
+                    <group>
+                        <field name="amount_due"/>
+                        <field name="overdue_since"/>
+                        <field name="notices_sent"/>
+                    </group>
+                </group>
+                <field name="reason" placeholder="Why this contract goes to legal, what was tried with the tenant..."/>
+                <field name="attachment_ids" widget="many2many_binary"/>
+                <footer>
+                    <button name="action_escalate" type="object" class="btn-danger"
+                            string="Send for Lawyer Approval"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_rent_legal_reject_wizard" model="ir.ui.view">
+        <field name="name">rent.legal.reject.wizard.form</field>
+        <field name="model">rent.legal.reject.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Reject Legal Case">
+                <field name="case_id" invisible="1" force_save="1"/>
+                <field name="reason" placeholder="Why the case is rejected / what to do instead"/>
+                <footer>
+                    <button name="action_reject" type="object" class="btn-danger" string="Reject"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

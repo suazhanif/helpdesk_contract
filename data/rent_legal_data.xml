@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="seq_rent_legal_case" model="ir.sequence">
+            <field name="name">Rent Legal Case</field>
+            <field name="code">rent.legal.case</field>
+            <field name="prefix">LC/%(year)s/</field>
+            <field name="padding">4</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <record id="ir_cron_rent_overdue_notices" model="ir.cron">
+            <field name="name">Rental: Overdue Rent Internal Notices</field>
+            <field name="model_id" ref="rental_management.model_tenancy_details"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_rent_overdue_notices()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- Change here (Settings > Technical > System Parameters) without code -->
+        <record id="param_rent_notice_interval_days" model="ir.config_parameter">
+            <field name="key">helpdesk_contractor.rent_notice_interval_days</field>
+            <field name="value">14</field>
+        </record>
+        <record id="param_rent_notice_max" model="ir.config_parameter">
+            <field name="key">helpdesk_contractor.rent_notice_max</field>
+            <field name="value">4</field>
+        </record>
+    </data>
+</odoo>

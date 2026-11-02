@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="helpdesk_ticket_view_form_contractor" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.form.contractor</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="inherit_id" ref="helpdesk.helpdesk_ticket_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_assign_contractor" type="object" string="Assign Contractor"
+                        icon="fa-user-plus" groups="helpdesk.group_helpdesk_user"/>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_contractor_jobs" type="object" class="oe_stat_button"
+                        icon="fa-wrench" invisible="contractor_job_count == 0">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value"><field name="contractor_job_count"/></span>
+                        <span class="o_stat_text">Contractor Jobs</span>
+                    </div>
+                </button>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Contractor" name="contractor" invisible="contractor_job_count == 0">
+                    <field name="contractor_job_ids" readonly="1">
+                        <list>
+                            <field name="name"/>
+                            <field name="contractor_id"/>
+                            <field name="user_id" widget="many2one_avatar_user"/>
+                            <field name="quote_amount"/>
+                            <field name="currency_id" column_invisible="1"/>
+                            <field name="state" widget="badge"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

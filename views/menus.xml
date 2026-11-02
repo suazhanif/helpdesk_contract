@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_helpdesk_contractor_job"
+              name="Contractor Jobs"
+              parent="helpdesk.menu_helpdesk_root"
+              action="action_helpdesk_contractor_job"
+              groups="helpdesk.group_helpdesk_user"
+              sequence="15"/>
+</odoo>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="seq_helpdesk_contractor_job" model="ir.sequence">
+        <field name="name">Helpdesk Contractor Job</field>
+        <field name="code">helpdesk.contractor.job</field>
+        <field name="prefix">CJ/%(year)s/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False"/>
+    </record>
+</odoo>
